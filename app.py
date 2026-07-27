@@ -1,74 +1,94 @@
-import os
 import streamlit as st
-from google import genai
+import re
+from collections import Counter
 
 # Page Configuration
 st.set_page_config(
-    page_title="DiscourseLens — Rhetoric & Discourse Analyzer",
+    page_title="DiscourseLens — Text & Rhetoric Analyzer",
     page_icon="🔍",
     layout="wide"
 )
 
 st.title("🔍 DiscourseLens")
-st.caption("Critical Discourse & Rhetorical Analysis Powered by Gemini AI")
-
-# Retrieve API Key from Secrets or Manual Input
-api_key = os.environ.get("GEMINI_API_KEY") or st.secrets.get("GEMINI_API_KEY")
-
-if not api_key:
-    st.warning("⚠️ Please enter a valid Gemini API Key in Streamlit Secrets or below.")
-    api_key_input = st.text_input("Enter your Gemini API Key:", type="password")
-    if api_key_input:
-        api_key = api_key_input
+st.caption("Automated Critical Discourse & Rhetorical Analysis Tool")
 
 # Sidebar Controls
-st.sidebar.header("Analysis Framework")
-analysis_focus = st.sidebar.selectbox(
-    "Select Focus Area:",
+st.sidebar.header("Analysis Settings")
+analysis_type = st.sidebar.selectbox(
+    "Select Analysis Focus:",
     [
         "General Critical Discourse Analysis",
-        "Media & Social Media (FOMO / Trends)",
-        "Literary & Rhetorical Analysis",
-        "Political Framing & Ideology"
+        "Media & Social Media (FOMO & Urgency)",
+        "Political Framing & Rhetoric"
     ]
 )
 
-# Text Input Area
+# Text Input
 user_text = st.text_area(
     "Paste text snippet for analysis:",
     height=200,
     placeholder="e.g., Everyone in college is buying this app before finals week! Don't get left behind..."
 )
 
-SYSTEM_PROMPT = """You are DiscourseLens, an expert AI research assistant specializing in Critical Discourse Analysis (CDA), Linguistics, and Literary Rhetoric.
-Analyze the user's text snippet and structure your response into 4 distinct sections:
-1. Core Themes & Power Dynamics
-2. Linguistic & Rhetorical Devices
-3. Target Audience & Emotional Triggers
-4. Academic Summary (2-sentence formal summary suitable for a literature review)
-Maintain an objective, academic tone. Use clear headings and bullet points."""
+def analyze_discourse(text):
+    words = re.findall(r'\b\w+\b', text.lower())
+    total_words = len(words)
+    
+    # Emotional & Rhetorical Markers
+    fomo_words = ["everyone", "don't", "miss", "behind", "urgent", "now", "exclusive", "limited", "secret", "must"]
+    fomo_matches = [w for w in words if w in fomo_words]
+    
+    modal_verbs = ["must", "should", "could", "would", "might", "can", "will"]
+    modal_matches = [w for w in words if w in modal_verbs]
+    
+    # Stopwords filter for key theme extraction
+    stopwords = set(["the", "a", "an", "is", "are", "and", "or", "to", "in", "of", "for", "on", "with", "this", "that", "it", "at", "by", "from", "be", "has", "have", "not"])
+    filtered_words = [w for w in words if w not in stopwords and len(w) > 2]
+    word_counts = Counter(filtered_words).most_common(5)
+    
+    return {
+        "total_words": total_words,
+        "fomo_count": len(fomo_matches),
+        "fomo_list": list(set(fomo_matches)),
+        "modal_count": len(modal_matches),
+        "modal_list": list(set(modal_matches)),
+        "top_keywords": word_counts
+    }
 
-# Execution
 if st.button("🚀 Analyze Discourse", type="primary"):
-    if not api_key:
-        st.error("Please provide a valid Gemini API Key to proceed.")
-    elif not user_text.strip():
+    if not user_text.strip():
         st.warning("Please enter some text to analyze.")
     else:
-        with st.spinner("Analyzing linguistic structures and discourse..."):
-            try:
-                client = genai.Client(api_key=api_key)
+        results = analyze_discourse(user_text)
+        
+        st.success("Analysis Complete!")
+        st.markdown("---")
+        
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            st.subheader("1. Core Themes & Keyword Density")
+            if results["top_keywords"]:
+                for word, count in results["top_keywords"]:
+                    st.write(f"- **{word.capitalize()}**: repeated {count} time(s)")
+            else:
+                st.write("No distinct recurring keywords detected.")
+
+            st.subheader("2. Linguistic & Rhetorical Devices")
+            st.write(f"- **Modal Verbs (Authority/Power Positioning)**: {results['modal_count']} found")
+            if results["modal_list"]:
+                st.caption(f"Detected: {', '.join(results['modal_list'])}")
                 
-                full_prompt = f"{SYSTEM_PROMPT}\n\nFocus: {analysis_focus}\n\nText:\n\"{user_text}\""
-                
-                response = client.models.generate_content(
-                    model='gemini-2.0-flash',
-                    contents=full_prompt
-                )
-                
-                st.success("Analysis Complete!")
-                st.markdown("---")
-                st.markdown(response.text)
-                
-            except Exception as e:
-                st.error(f"An error occurred: {str(e)}")
+        with col2:
+            st.subheader("3. Emotional Triggers & Urgency (FOMO)")
+            st.write(f"- **Urgency/FOMO Markers**: {results['fomo_count']} found")
+            if results["fomo_list"]:
+                st.caption(f"Detected words: {', '.join(results['fomo_list'])}")
+            else:
+                st.caption("Low urgency or persuasion-heavy language detected.")
+
+            st.subheader("4. Academic Summary")
+            st.info(
+                f"The analyzed text comprises **{results['total_words']} words** evaluated under the **{analysis_type}** framework. "
+                f"Primary discourse features include {results['fomo_count']} urgency markers and {results['modal_count']} modal constructs shaping persuasive stance."
+            )

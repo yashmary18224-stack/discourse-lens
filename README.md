@@ -5,7 +5,7 @@
 ---
 
 ## 🚀 Live App URL
-🔗 Deployed Application: https://discourse-lens-ya4j8w3axv7zpvfekhycww.streamlit.app/
+🔗 Deployed Application: https://discourse-lens-bjscvxpcfrwbykyegphp2e.streamlit.app/
 
 ---
 

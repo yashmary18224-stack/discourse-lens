@@ -68,7 +68,7 @@ if st.button("🚀 Analyze Discourse", type="primary"):
                 full_prompt = f"{SYSTEM_PROMPT}\n\nSelected Analytical Focus: {analysis_focus}\n\nText for Analysis:\n\"\"\"{user_text}\"\"\""
                 
                 response = client.models.generate_content(
-                    model='gemini-2.5-flash',
+                    model='gemini-3.6-flash',
                     contents=full_prompt
                 )
                 

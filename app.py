@@ -1,6 +1,7 @@
 import os
 import streamlit as st
 from google import genai
+from google.genai import types
 
 # Page Configuration
 st.set_page_config(
@@ -65,11 +66,15 @@ if st.button("🚀 Analyze Discourse", type="primary"):
             try:
                 client = genai.Client(api_key=api_key)
                 
-                full_prompt = f"{SYSTEM_PROMPT}\n\nSelected Analytical Focus: {analysis_focus}\n\nText for Analysis:\n\"\"\"{user_text}\"\"\""
+                full_prompt = f"Selected Analytical Focus: {analysis_focus}\n\nText for Analysis:\n\"\"\"{user_text}\"\"\""
                 
                 response = client.models.generate_content(
                     model='gemini-3.6-flash',
-                    contents=full_prompt
+                    contents=full_prompt,
+                    config=types.GenerateContentConfig(
+                        system_instruction=SYSTEM_PROMPT,
+                        temperature=0.3,
+                    ),
                 )
                 
                 st.success("Analysis Complete!")
